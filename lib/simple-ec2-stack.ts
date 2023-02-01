@@ -5,15 +5,20 @@ import * as aas from "aws-cdk-lib/aws-autoscaling";
 import { Construct } from "constructs";
 import { Duration } from "aws-cdk-lib";
 
+const PARAMS = {
+    vpc: { id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"], natGateways: 0 },
+    alb: { id: "ApplicationLoadBalancer", name: "WebServer-ALB", sgName: "alb-sg", sgId: "ALB-SecurityGroup" },
+    asg: { id: "AutoScalingGroup", name: "kasumi-webserver", sgId: "ASG-SecurityGroup", sgName: "auto-scale-sg", ltId: "LaunchTemplate", ltName: "webserver", tgId: "TargetGroup", tgName: "Kasumi-WebServer-TG" }
+}
 export class Ec2Stack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
         // Create new VPC with 2 subnets
-        const vpc = new ec2.Vpc(this, 'VPC', {
-            vpcName: "Kasumi-Sample",
-            availabilityZones: ["ap-northeast-1a", "ap-northeast-1c"],
-            natGateways: 0,
+        const vpc = new ec2.Vpc(this, PARAMS.vpc.id, {
+            vpcName: PARAMS.vpc.name,
+            availabilityZones: PARAMS.vpc.az,
+            natGateways: PARAMS.vpc.natGateways,
             subnetConfiguration: [
                 {
                     name: "web-private-net-",
@@ -38,17 +43,17 @@ export class Ec2Stack extends cdk.Stack {
         Create Load Balancer
             Start
         */
-        const albSecurityGroup = new ec2.SecurityGroup(this, 'ALB-SecurityGroup', {
+        const albSecurityGroup = new ec2.SecurityGroup(this, PARAMS.alb.sgId, {
             vpc,
-            securityGroupName: "alb-sg",
+            securityGroupName: PARAMS.alb.sgName,
             description: "Open to the internet."
         });
 
-        const webALB = new lbv2.ApplicationLoadBalancer(this, 'ApplicationLoadBalancer', {
+        const webALB = new lbv2.ApplicationLoadBalancer(this, PARAMS.alb.id, {
             vpc,
+            loadBalancerName: PARAMS.alb.name,
             securityGroup: albSecurityGroup,
             internetFacing: false,
-            loadBalancerName: 'WebServer-ALB',
             idleTimeout: Duration.seconds(180),
         });
 
@@ -60,24 +65,24 @@ export class Ec2Stack extends cdk.Stack {
 
         /* Create Auto Scaling Groups */
         // Security Group for Auto Scaling Group
-        const instanceSecurityGroup = new ec2.SecurityGroup(this, 'ASG-SecurityGroup', {
+        const instanceSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
             vpc,
-            securityGroupName: "auto-scale-sg",
+            securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
         // allow inbound connection from ALB
         instanceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(80));
 
         // Launch Template
-        const template = new ec2.LaunchTemplate(this, 'LaunchTemplate', {
+        const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
             machineImage: ami,
-            launchTemplateName: 'webserver',
+            launchTemplateName: PARAMS.asg.ltId,
             securityGroup: instanceSecurityGroup,
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO)
         });
-        const autoscaling = new aas.AutoScalingGroup(this, 'AutoScalingGroup', {
+        const autoscaling = new aas.AutoScalingGroup(this, PARAMS.asg.id, {
             vpc,
-            autoScalingGroupName: 'kasumi-webserver',
+            autoScalingGroupName: PARAMS.asg.name,
             launchTemplate: template,
             minCapacity: 1,
             maxCapacity: 2,
@@ -91,9 +96,9 @@ export class Ec2Stack extends cdk.Stack {
         });
 
         // Target Group
-        const targetGroup = new lbv2.ApplicationTargetGroup(this, 'TargetGroup', {
+        const targetGroup = new lbv2.ApplicationTargetGroup(this, PARAMS.asg.tgId, {
             vpc,
-            targetGroupName: 'Kasumi-WebServer-TG',
+            targetGroupName: PARAMS.asg.tgName,
             port: 80,
             targets: [autoscaling],
             healthCheck: {
