@@ -2,7 +2,7 @@
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
 import { D8AwsTrainingStack } from '../lib/d8-aws-training-stack';
-import { Ec2Stack } from '../lib/simple-ec2-stack'
+import { KasumiSampleStack } from '../lib/kasumi-sample'
 
 const app = new cdk.App();
 new D8AwsTrainingStack(app, 'D8AwsTrainingStack', {
@@ -20,4 +20,4 @@ new D8AwsTrainingStack(app, 'D8AwsTrainingStack', {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
-new Ec2Stack(app, 'Ec2Stack', {});
+new KasumiSampleStack(app, 'KasumiSampleStack', {});

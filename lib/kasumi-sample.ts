@@ -6,14 +6,18 @@ import { Construct } from "constructs";
 import { Duration } from "aws-cdk-lib";
 
 const PARAMS = {
-    vpc: { id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"], natGateways: 0 },
+    vpc: { id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"], natGateways: 0, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net", privateNetRTId: "PrivateRT" },
     alb: { id: "ApplicationLoadBalancer", name: "WebServer-ALB", sgName: "alb-sg", sgId: "ALB-SecurityGroup" },
     asg: { id: "AutoScalingGroup", name: "kasumi-webserver", sgId: "ASG-SecurityGroup", sgName: "auto-scale-sg", ltId: "LaunchTemplate", ltName: "webserver", tgId: "TargetGroup", tgName: "Kasumi-WebServer-TG" }
 }
-export class Ec2Stack extends cdk.Stack {
+export class KasumiSampleStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
+        /*
+        Create VPC
+            start
+        */
         // Create new VPC with 2 subnets
         const vpc = new ec2.Vpc(this, PARAMS.vpc.id, {
             vpcName: PARAMS.vpc.name,
@@ -21,17 +25,30 @@ export class Ec2Stack extends cdk.Stack {
             natGateways: PARAMS.vpc.natGateways,
             subnetConfiguration: [
                 {
-                    name: "web-private-net-",
+                    name: PARAMS.vpc.webSubnetName,
                     subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
                     cidrMask: 24,
                 },
-                // {
-                //     name: "rds-private-net-",
-                //     subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-                //     cidrMask: 24,
-                // },
+                {
+                    name: PARAMS.vpc.rdsSubnetName,
+                    subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+                    cidrMask: 24,
+                },
             ]
         });
+
+
+        // Getting the subnet CIDRs
+        const [webSubnet, rdsSubnet] = [vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.webSubnetName }).subnets, vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.rdsSubnetName }).subnets];
+        let [webSunbetCidr, rdsSubnetCidr] = [new Array(), new Array()];
+        for (let subnet of webSubnet) {
+            webSunbetCidr.push(subnet.ipv4CidrBlock);
+        }
+        for (let subnet of rdsSubnet) {
+            rdsSubnetCidr.push(subnet.ipv4CidrBlock);
+        }
+        /* end */
+
 
         // Use latest Amazon Linux Image - CPU type x84_64
         const ami = new ec2.AmazonLinuxImage({
@@ -41,7 +58,7 @@ export class Ec2Stack extends cdk.Stack {
 
         /*
         Create Load Balancer
-            Start
+            start
         */
         const albSecurityGroup = new ec2.SecurityGroup(this, PARAMS.alb.sgId, {
             vpc,
@@ -55,6 +72,7 @@ export class Ec2Stack extends cdk.Stack {
             securityGroup: albSecurityGroup,
             internetFacing: false,
             idleTimeout: Duration.seconds(180),
+            vpcSubnets: vpc.selectSubnets({ subnetGroupName: "web-private-net" })
         });
 
         // add listener to alb
@@ -62,23 +80,39 @@ export class Ec2Stack extends cdk.Stack {
             port: 80,
             open: true
         });
+        /* end */
 
-        /* Create Auto Scaling Groups */
+        /*
+        Create Auto Scaling Groups
+            start
+        */
         // Security Group for Auto Scaling Group
         const instanceSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
             vpc,
             securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
-        // allow inbound connection from ALB
+        // allow inbound HTTP connection from ALB
         instanceSecurityGroup.addIngressRule(albSecurityGroup, ec2.Port.tcp(80));
+        // allow inbound SSH connection from the same instances within VPC
+        instanceSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(22));
+
 
         // Launch Template
+        const userData = ec2.UserData.forLinux();
+        userData.addCommands(
+            "sudo yum update",
+            "sudo amazon-linux-extras install nginx1",
+            "sudo systemctl enable nginx",
+            "sudo systemctl start nginx"
+        )
         const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
+            userData,
             machineImage: ami,
             launchTemplateName: PARAMS.asg.ltId,
             securityGroup: instanceSecurityGroup,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO)
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+            keyName: 'sample'
         });
         const autoscaling = new aas.AutoScalingGroup(this, PARAMS.asg.id, {
             vpc,
@@ -114,6 +148,5 @@ export class Ec2Stack extends cdk.Stack {
             targetGroups: [targetGroup]
         });
         /* end */
-
     }
 }
