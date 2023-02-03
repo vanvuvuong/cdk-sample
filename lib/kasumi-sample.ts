@@ -58,7 +58,7 @@ export class KasumiSampleStack extends cdk.Stack {
         Create Security Groups
             start
         */
-        // ALB Security Group
+        // Security Group for ALB
         const albSecurityGroup = new ec2.SecurityGroup(this, PARAMS.alb.sgId, {
             vpc,
             securityGroupName: PARAMS.alb.sgName,
@@ -66,7 +66,7 @@ export class KasumiSampleStack extends cdk.Stack {
         });
         albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow all HTTP traffic to load balancer");
 
-        // Auto Scaling Group Security Group
+        // Security Group for Auto Scaling Group
         const instanceSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
             vpc,
             securityGroupName: PARAMS.asg.sgName,
