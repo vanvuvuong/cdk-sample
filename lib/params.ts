@@ -1,8 +1,9 @@
 export const PARAMS = {
     vpc: {
         id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"],
-        natGateways: 1, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net",
-        testNetName: "publicTestNet", privateNetRTId: "PrivateRT"
+        natGateways: 0, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net",
+        testNetName: "publicTestNet", privateNetRTId: "PrivateRT",
+        endpointId: "VPC-Endpoint"
     },
     alb: { id: "ApplicationLoadBalancer", name: "WebServer-ALB", sgName: "alb-sg", sgId: "ALB-SecurityGroup" },
     asg: {

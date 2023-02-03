@@ -21,12 +21,12 @@ export class KasumiSampleStack extends cdk.Stack {
             subnetConfiguration: [
                 {
                     name: PARAMS.vpc.webSubnetName,
-                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
                     cidrMask: 24,
                 },
                 {
                     name: PARAMS.vpc.rdsSubnetName,
-                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+                    subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
                     cidrMask: 24,
                 },
                 {
@@ -37,6 +37,11 @@ export class KasumiSampleStack extends cdk.Stack {
                 }
             ]
         });
+        vpc.addGatewayEndpoint('S3Endpoint', {
+            service: ec2.GatewayVpcEndpointAwsService.S3,
+            subnets: [vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.webSubnetName })]
+        });
+
         /* end */
 
         /*
@@ -49,7 +54,7 @@ export class KasumiSampleStack extends cdk.Stack {
             securityGroupName: PARAMS.alb.sgName,
             description: "Open to the internet."
         });
-        albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), "Allow all HTTP traffic to load balancer");
+        albSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(80), "Allow all HTTP traffic to load balancer");
 
         // Security Group for Auto Scaling Group
         const instanceSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
@@ -102,8 +107,6 @@ export class KasumiSampleStack extends cdk.Stack {
         */
         const userData = ec2.UserData.forLinux();
         userData.addCommands(
-            "sudo yum update",
-            "sudo yum install mysql telnet -y",
             "sudo amazon-linux-extras install nginx1",
             "sudo systemctl enable nginx",
             "sudo systemctl start nginx",
@@ -161,7 +164,7 @@ export class KasumiSampleStack extends cdk.Stack {
             credentials: rds.Credentials.fromGeneratedSecret('admin'), // create secret key in AWS Secret Manager
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
             vpcSubnets: {
-                subnetGroupName: PARAMS.vpc.webSubnetName
+                subnetGroupName: PARAMS.vpc.rdsSubnetName
             },
             engine: rds.DatabaseInstanceEngine.mysql({
                 version: rds.MysqlEngineVersion.VER_5_7
