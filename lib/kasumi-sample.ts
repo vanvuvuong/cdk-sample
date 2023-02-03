@@ -1,25 +1,10 @@
+import { PARAMS } from "./params";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as aas from "aws-cdk-lib/aws-autoscaling";
-import * as sm from "aws-cdk-lib/aws-secretsmanager";
 import * as lbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
-
-const PARAMS = {
-    vpc: {
-        id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"],
-        natGateways: 1, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net",
-        testNetName: "publicTestNet", privateNetRTId: "PrivateRT"
-    },
-    alb: { id: "ApplicationLoadBalancer", name: "WebServer-ALB", sgName: "alb-sg", sgId: "ALB-SecurityGroup" },
-    asg: {
-        id: "AutoScalingGroup", name: "kasumi-webserver", sgId: "ASG-SecurityGroup", sgName: "auto-scale-sg",
-        ltId: "LaunchTemplate", ltName: "webserver", tgId: "TargetGroup", tgName: "Kasumi-WebServer-TG"
-    },
-    rds: { id: "MySQL-Database", name: "kasumi-sample", sgId: "RdsSG", sgName: 'rds-sg' },
-    sm: { id: "SecretManager" }
-}
 export class KasumiSampleStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
