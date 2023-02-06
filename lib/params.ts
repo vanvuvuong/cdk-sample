@@ -11,5 +11,9 @@ export const PARAMS = {
         ltId: "LaunchTemplate", ltName: "webserver", tgId: "TargetGroup", tgName: "Kasumi-WebServer-TG"
     },
     rds: { id: "MySQL-Database", name: "kasumi-sample", sgId: "RdsSG", sgName: 'rds-sg' },
-    sm: { id: "SecretManager" }
+    sm: { id: "SecretManager" },
+    ecs: {
+        clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "nginx"
+    },
+    ec2KeyName: "sample"
 }

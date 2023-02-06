@@ -5,7 +5,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as aas from "aws-cdk-lib/aws-autoscaling";
 import * as lbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
-export class KasumiSampleStack extends cdk.Stack {
+export class KasumiSample extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
@@ -107,7 +107,7 @@ export class KasumiSampleStack extends cdk.Stack {
         */
         const userData = ec2.UserData.forLinux();
         userData.addCommands(
-            "sudo amazon-linux-extras install nginx1",
+            "sudo amazon-linux-extras install nginx1 -y",
             "sudo systemctl enable nginx",
             "sudo systemctl start nginx",
         );
@@ -118,7 +118,7 @@ export class KasumiSampleStack extends cdk.Stack {
         const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
             userData,
             machineImage: ami,
-            keyName: 'sample',
+            keyName: PARAMS.ec2KeyName,
             launchTemplateName: PARAMS.asg.ltName,
             securityGroup: instanceSecurityGroup,
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
