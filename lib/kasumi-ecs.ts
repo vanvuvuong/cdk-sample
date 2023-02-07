@@ -16,10 +16,6 @@ export class HelloEcs extends cdk.Stack {
             availabilityZones: PARAMS.vpc.az,
             natGateways: PARAMS.vpc.natGateways,
         });
-        vpc.addGatewayEndpoint('S3Endpoint', {
-            service: ec2.GatewayVpcEndpointAwsService.S3,
-            subnets: [vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.pubTestNetName })]
-        });
 
         const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
             vpc,
@@ -43,7 +39,8 @@ export class HelloEcs extends cdk.Stack {
         const userData = ec2.UserData.forLinux();
         userData.addCommands(
             "sudo amazon-linux-extras disable docker",
-            "sudo amazon-linux-extras install -y ecs"
+            "sudo amazon-linux-extras install -y ecs",
+            "sudo systemctl enable ecs; sudo systemctl start ecs"
         );
         const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
             userData,
