@@ -15,6 +15,18 @@ export class HelloEcs extends cdk.Stack {
             vpcName: PARAMS.vpc.name,
             availabilityZones: PARAMS.vpc.az,
             natGateways: PARAMS.vpc.natGateways,
+            subnetConfiguration: [
+                {
+                    name: PARAMS.vpc.webSubnetName,
+                    subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+                    cidrMask: 24,
+                },
+                {
+                    name: PARAMS.vpc.pubTestNetName,
+                    subnetType: ec2.SubnetType.PUBLIC,
+                    mapPublicIpOnLaunch: true,
+                    cidrMask: 24
+                }]
         });
 
         const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
@@ -22,51 +34,26 @@ export class HelloEcs extends cdk.Stack {
             containerInsights: true,
         });
 
-        // custom autoscaling group
-        const ami = new ec2.AmazonLinuxImage({
-            generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
-            cpuType: ec2.AmazonLinuxCpuType.X86_64,
-        });
-
         // Security Group for Auto Scaling Group
-        const instanceSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
+        const asgSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
             vpc,
             securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
-        instanceSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.tcp(22), "Allow inbounds SSH connections from the same instances within VPC");
-
-        const userData = ec2.UserData.forLinux();
-        userData.addCommands(
-            "sudo amazon-linux-extras disable docker",
-            "sudo amazon-linux-extras install -y ecs",
-            "sudo systemctl enable ecs; sudo systemctl start ecs"
-        );
-        const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
-            userData,
-            machineImage: ami,
-            role: new iam.Role(this, "LaunchTemplateIAM", {
-                assumedBy: new iam.AnyPrincipal,
-            }),
-            keyName: PARAMS.ec2KeyName,
-            launchTemplateName: PARAMS.asg.ltName,
-            securityGroup: instanceSecurityGroup,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
-        });
-        const autoScalingGroup = new aas.AutoScalingGroup(this, PARAMS.asg.id, {
-            vpc,
-            autoScalingGroupName: PARAMS.asg.name,
-            launchTemplate: template,
+        asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), "Allow inbounds SSH connections from the same instances within VPC");
+        const autoScalingGroup = cluster.addCapacity('ContainerCapacity', {
             minCapacity: 2,
-            maxCapacity: 3,
+            desiredCapacity: 2,
+            keyName: PARAMS.ec2KeyName,
+            allowAllOutbound: true,
+            instanceType: new ec2.InstanceType("t2.micro"),
+            machineImage: new ec2.AmazonLinuxImage({
+                cpuType: ec2.AmazonLinuxCpuType.X86_64,
+                generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
+            }),
+            vpcSubnets: vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.pubTestNetName }),
         });
-        const capacityProvider = new ecs.AsgCapacityProvider(this, 'AsgCapacityProvider', {
-            autoScalingGroup,
-            canContainersAccessInstanceRole: true,
-            enableManagedScaling: true,
-            machineImageType: ecs.MachineImageType.AMAZON_LINUX_2
-        });
-        cluster.addAsgCapacityProvider(capacityProvider);
+        autoScalingGroup.addSecurityGroup(asgSecurityGroup);
 
         let taskDefinition = new ecs.Ec2TaskDefinition(this, PARAMS.ecs.tdId, {
             family: "WebService",
