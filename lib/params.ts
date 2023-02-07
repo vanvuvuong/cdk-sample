@@ -2,7 +2,7 @@ export const PARAMS = {
     vpc: {
         id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"],
         natGateways: 0, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net",
-        testNetName: "publicTestNet", privateNetRTId: "PrivateRT",
+        pubTestNetName: "publicTestNet", privateNetRTId: "PrivateRT",
         endpointId: "VPC-Endpoint"
     },
     alb: { id: "ApplicationLoadBalancer", name: "WebServer-ALB", sgName: "alb-sg", sgId: "ALB-SecurityGroup" },
@@ -13,7 +13,7 @@ export const PARAMS = {
     rds: { id: "MySQL-Database", name: "kasumi-sample", sgId: "RdsSG", sgName: 'rds-sg' },
     sm: { id: "SecretManager" },
     ecs: {
-        clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "nginx"
+        clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "https://hub.docker.com/_/nginx:latest"
     },
     ec2KeyName: "sample"
 }

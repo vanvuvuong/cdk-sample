@@ -30,7 +30,7 @@ export class KasumiSample extends cdk.Stack {
                     cidrMask: 24,
                 },
                 {
-                    name: PARAMS.vpc.testNetName,
+                    name: PARAMS.vpc.pubTestNetName,
                     subnetType: ec2.SubnetType.PUBLIC,
                     mapPublicIpOnLaunch: true,
                     cidrMask: 24
