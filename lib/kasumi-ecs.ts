@@ -28,6 +28,15 @@ export class HelloEcs extends cdk.Stack {
                     cidrMask: 24
                 }]
         });
+        // vpc.addInterfaceEndpoint('Sample', {
+        //     service: ec2.InterfaceVpcEndpointAwsService.ECS
+        // });
+        // vpc.addInterfaceEndpoint('Sample', {
+        //     service: ec2.InterfaceVpcEndpointAwsService.ECS_AGENT
+        // });
+        // vpc.addInterfaceEndpoint('Sample', {
+        //     service: ec2.InterfaceVpcEndpointAwsService.ECS_TELEMETRY
+        // });
 
         const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
             vpc,
@@ -40,7 +49,7 @@ export class HelloEcs extends cdk.Stack {
             securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
-        asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), "Allow inbounds SSH connections from the same instances within VPC");
+        // asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), "Allow inbounds SSH connections from the same instances within VPC");
         const autoScalingGroup = cluster.addCapacity('ContainerCapacity', {
             minCapacity: 2,
             desiredCapacity: 2,
@@ -59,12 +68,26 @@ export class HelloEcs extends cdk.Stack {
             containerName: "nginx",
             memoryLimitMiB: 512,
             essential: true,
-            command: ["sleep", "infinity"],
+            entryPoint: ["sleep", "infinity"],
+            healthCheck: {
+                command: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"],
+                timeout: cdk.Duration.seconds(30)
+            }
         });
         webContainer.addPortMappings({
             hostPort: 80,
             containerPort: 80,
             protocol: ecs.Protocol.TCP
+        });
+
+        const webAlb = new ecsp.ApplicationLoadBalancedEc2Service(this, PARAMS.ecs.albId, {
+            cluster,
+            taskDefinition,
+            cpu: 0.5,
+            memoryLimitMiB: 512,
+            desiredCount: 2,
+            publicLoadBalancer: true,
+            serviceName: "nginx-server",
         });
     }
 }

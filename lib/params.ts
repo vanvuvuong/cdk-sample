@@ -13,7 +13,7 @@ export const PARAMS = {
     rds: { id: "MySQL-Database", name: "kasumi-sample", sgId: "RdsSG", sgName: 'rds-sg' },
     sm: { id: "SecretManager" },
     ecs: {
-        clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "https://hub.docker.com/_/nginx:latest"
+        clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "dongtd212/lab:1.1"
     },
     ec2KeyName: "sample"
 }
