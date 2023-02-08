@@ -46,11 +46,7 @@ export class HelloEcs extends cdk.Stack {
             desiredCapacity: 2,
             keyName: PARAMS.ec2KeyName,
             allowAllOutbound: true,
-            instanceType: new ec2.InstanceType("t2.micro"),
-            machineImage: new ec2.AmazonLinuxImage({
-                cpuType: ec2.AmazonLinuxCpuType.X86_64,
-                generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
-            }),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
             vpcSubnets: vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.pubTestNetName }),
         });
         autoScalingGroup.addSecurityGroup(asgSecurityGroup);
