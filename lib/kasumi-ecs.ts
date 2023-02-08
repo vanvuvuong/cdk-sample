@@ -28,19 +28,10 @@ export class HelloEcs extends cdk.Stack {
                     cidrMask: 24
                 }]
         });
-        // vpc.addInterfaceEndpoint('Sample', {
-        //     service: ec2.InterfaceVpcEndpointAwsService.ECS
-        // });
-        // vpc.addInterfaceEndpoint('Sample', {
-        //     service: ec2.InterfaceVpcEndpointAwsService.ECS_AGENT
-        // });
-        // vpc.addInterfaceEndpoint('Sample', {
-        //     service: ec2.InterfaceVpcEndpointAwsService.ECS_TELEMETRY
-        // });
 
         const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
             vpc,
-            containerInsights: true,
+            containerInsights: false,
         });
 
         // Security Group for Auto Scaling Group
@@ -49,7 +40,7 @@ export class HelloEcs extends cdk.Stack {
             securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
-        // asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), "Allow inbounds SSH connections from the same instances within VPC");
+        asgSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.allTraffic(), "Allow inbounds connections");
         const autoScalingGroup = cluster.addCapacity('ContainerCapacity', {
             minCapacity: 2,
             desiredCapacity: 2,
@@ -66,13 +57,8 @@ export class HelloEcs extends cdk.Stack {
         let webContainer = taskDefinition.addContainer(PARAMS.ecs.containerId, {
             image: ecs.ContainerImage.fromRegistry(PARAMS.ecs.image),
             containerName: "nginx",
-            memoryLimitMiB: 512,
+            memoryLimitMiB: 128,
             essential: true,
-            entryPoint: ["sleep", "infinity"],
-            healthCheck: {
-                command: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"],
-                timeout: cdk.Duration.seconds(30)
-            }
         });
         webContainer.addPortMappings({
             hostPort: 80,
