@@ -28,17 +28,13 @@ export class HelloEcs extends cdk.Stack {
                 }]
         });
 
-        const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
-            vpc,
-            containerInsights: false,
-        });
-
         // Security Group for Auto Scaling Group
         const asgSecurityGroup = new ec2.SecurityGroup(this, PARAMS.asg.sgId, {
             vpc,
             securityGroupName: PARAMS.asg.sgName,
             description: "SG for autoscaling group"
         });
+        asgSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.allTraffic(), "Allow inbounds within VPC");
 
         // Security Group for RDS
         const rdsSecurityGroup = new ec2.SecurityGroup(this, PARAMS.rds.sgId, {
@@ -48,7 +44,11 @@ export class HelloEcs extends cdk.Stack {
         });
         rdsSecurityGroup.addIngressRule(asgSecurityGroup, ec2.Port.tcp(3306));
 
-        asgSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.allTraffic(), "Allow inbounds within VPC");
+        const cluster = new ecs.Cluster(this, PARAMS.ecs.clusterId, {
+            vpc,
+            containerInsights: false,
+        });
+
         const autoScalingGroup = cluster.addCapacity('ContainerCapacity', {
             minCapacity: 2,
             desiredCapacity: 2,
