@@ -15,5 +15,6 @@ export const PARAMS = {
     ecs: {
         clusterId: "Cluster", ccId: "ContainerCapacity", albId: "Webserver", tdId: "TaskDefinition", containerId: "nginx", image: "dongtd212/lab:1.2"
     },
+    cf: { bucketId: "Bucket", bucketName: "statistic-sampled-s", fileId: "SampleHtmlDeploy", id: "StaticCF" },
     ec2KeyName: "sample"
 }
