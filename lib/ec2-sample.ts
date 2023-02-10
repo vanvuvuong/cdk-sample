@@ -5,7 +5,7 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as aas from "aws-cdk-lib/aws-autoscaling";
 import * as lbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
-export class KasumiSample extends cdk.Stack {
+export class Ec2Sample extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 

@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/d8-aws-training.ts",
+  "app": "npx ts-node --prefer-ts-exts bin/aws-training.ts",
   "watch": {
     "include": [
       "**"

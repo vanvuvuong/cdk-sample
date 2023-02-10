@@ -1,8 +1,8 @@
 {
-  "name": "d8-aws-training",
+  "name": "aws-training",
   "version": "0.1.0",
   "bin": {
-    "d8-aws-training": "bin/d8-aws-training.js"
+    "aws-training": "bin/aws-training.js"
   },
   "scripts": {
     "build": "tsc",

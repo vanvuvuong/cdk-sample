@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { KasumiSample } from '../lib/kasumi-sample'
-import { HelloEcs } from '../lib/kasumi-ecs'
+import { Ec2Sample } from '../lib/ec2-sample'
+import { HelloEcs } from '../lib/ecs-sample'
 import { StatisticWeb } from '../lib/statistic-web'
 
 const app = new cdk.App();
-new KasumiSample(app, 'KasumiSample', {});
+new Ec2Sample(app, 'Ec2Sample', {});
 new HelloEcs(app, 'HelloEcs', {});
 new StatisticWeb(app, 'StatisticWeb', {});
