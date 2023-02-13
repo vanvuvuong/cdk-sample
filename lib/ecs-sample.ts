@@ -82,7 +82,7 @@ export class HelloEcs extends cdk.Stack {
             cpu: 0.5,
             memoryLimitMiB: 512,
             desiredCount: 2,
-            publicLoadBalancer: true,
+            publicLoadBalancer: false,
             serviceName: "nginx-server",
         });
         this.webAlbService = webAlbService;
@@ -108,6 +108,7 @@ export class HelloEcs extends cdk.Stack {
                 version: rds.MysqlEngineVersion.VER_5_7
             }),
             securityGroups: [rdsSecurityGroup],
+            backupRetention: cdk.Duration.days(0),
         });
         /* end */
     }
