@@ -7,6 +7,8 @@ import * as rds from "aws-cdk-lib/aws-rds";
 import * as ecsp from 'aws-cdk-lib/aws-ecs-patterns';
 
 export class HelloEcs extends cdk.Stack {
+    webAlbService: ecsp.ApplicationLoadBalancedEc2Service;
+
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
 
@@ -74,7 +76,7 @@ export class HelloEcs extends cdk.Stack {
             protocol: ecs.Protocol.TCP
         });
 
-        const webAlb = new ecsp.ApplicationLoadBalancedEc2Service(this, PARAMS.ecs.albId, {
+        const webAlbService = new ecsp.ApplicationLoadBalancedEc2Service(this, PARAMS.ecs.albId, {
             cluster,
             taskDefinition,
             cpu: 0.5,
@@ -83,6 +85,7 @@ export class HelloEcs extends cdk.Stack {
             publicLoadBalancer: true,
             serviceName: "nginx-server",
         });
+        this.webAlbService = webAlbService;
 
         /*
         Create RDS
