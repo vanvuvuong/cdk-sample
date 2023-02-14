@@ -5,6 +5,8 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as ecsp from 'aws-cdk-lib/aws-ecs-patterns';
+import * as cf from "aws-cdk-lib/aws-cloudfront";
+import * as cfo from "aws-cdk-lib/aws-cloudfront-origins";
 
 export class HelloEcs extends cdk.Stack {
     webAlbService: ecsp.ApplicationLoadBalancedEc2Service;
@@ -82,7 +84,7 @@ export class HelloEcs extends cdk.Stack {
             cpu: 0.5,
             memoryLimitMiB: 512,
             desiredCount: 2,
-            publicLoadBalancer: false,
+            publicLoadBalancer: true,
             serviceName: "nginx-server",
         });
         this.webAlbService = webAlbService;
@@ -111,5 +113,23 @@ export class HelloEcs extends cdk.Stack {
             backupRetention: cdk.Duration.days(0),
         });
         /* end */
+        const lbOrigin = new cfo.LoadBalancerV2Origin(webAlbService.loadBalancer, {
+            connectionAttempts: 3,
+            connectionTimeout: cdk.Duration.seconds(10),
+            readTimeout: cdk.Duration.seconds(45),
+            keepaliveTimeout: cdk.Duration.seconds(45),
+            protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
+            httpPort: 80,
+        });
+
+        // const cfDistribution = new cf.Distribution(this, PARAMS.cf.id, {
+        //     defaultBehavior: {
+        //         origin: lbOrigin,
+        //         allowedMethods: cf.AllowedMethods.ALLOW_ALL,
+        //         cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        //     },
+        //     priceClass: cf.PriceClass.PRICE_CLASS_200,
+        //     httpVersion: cf.HttpVersion.HTTP2_AND_3
+        // });
     }
 }

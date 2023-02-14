@@ -12,7 +12,7 @@ export class Cloudfront extends HelloEcs {
         super(scope, id, props);
 
         const cfOriginAccessIdentity = new cf.OriginAccessIdentity(this, 'OAI', {
-            comment: "only from cloudfront to s3",
+            comment: "only from cloudfront to s3 - static with ecs",
         });
 
         const bucket = new s3.Bucket(this, PARAMS.cf.bucketId, {
@@ -21,56 +21,72 @@ export class Cloudfront extends HelloEcs {
             websiteIndexDocument: 'index.html',
             websiteErrorDocument: '404.html',
             removalPolicy: cdk.RemovalPolicy.DESTROY,
-            accessControl: s3.BucketAccessControl.AUTHENTICATED_READ
+            accessControl: s3.BucketAccessControl.PRIVATE,
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+            objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED
         });
         bucket.grantRead(cfOriginAccessIdentity);
-
-        const lbOrigin = new cfo.LoadBalancerV2Origin(this.webAlbService.loadBalancer, {
-            connectionAttempts: 3,
-            connectionTimeout: cdk.Duration.seconds(10),
-            readTimeout: cdk.Duration.seconds(45),
-            keepaliveTimeout: cdk.Duration.seconds(45),
-            protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
-            httpPort: 80,
-        });
-        const s3Origin = new cfo.S3Origin(bucket, {
-            originPath: "/",
-            originAccessIdentity: cfOriginAccessIdentity,
-        })
-
-        const cfFunction = new cf.Function(this, 'Function', {
-            code: cf.FunctionCode.fromFile({ filePath: './lib/function.js' })
-        });
-        const cfDistribution = new cf.Distribution(this, PARAMS.cf.id, {
-            defaultBehavior: {
-                origin: s3Origin,
-                functionAssociations: [{
-                    function: cfFunction,
-                    eventType: cf.FunctionEventType.VIEWER_REQUEST
-                }]
-            },
-            additionalBehaviors: {
-                "/ecs/*": {
-                    origin: lbOrigin,
-                    allowedMethods: cf.AllowedMethods.ALLOW_ALL,
-                    viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
-                    cachePolicy: cf.CachePolicy.CACHING_OPTIMIZED,
-                    functionAssociations: [{
-                        function: cfFunction,
-                        eventType: cf.FunctionEventType.VIEWER_REQUEST
-                    }]
-                }
-            },
-            defaultRootObject: "index.html",
-            priceClass: cf.PriceClass.PRICE_CLASS_ALL,
-            httpVersion: cf.HttpVersion.HTTP2_AND_3
-        });
 
         const sampleHtmlFile = new s3deploy.BucketDeployment(this, PARAMS.cf.fileId, {
             destinationBucket: bucket,
             sources: [s3deploy.Source.asset('./public')],
-            distribution: cfDistribution,
-            distributionPaths: ["/*"]
+        });
+
+        // const cfDistribution = new cf.Distribution(this, `${PARAMS.cf.id}-2`, {
+        //     defaultBehavior: {
+        //         origin: new cfo.S3Origin(bucket, {
+        //             originPath: "",
+        //             originAccessIdentity: cfOriginAccessIdentity,
+        //         }),
+        //         allowedMethods: cf.AllowedMethods.ALLOW_ALL,
+        //         cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        //     },
+        //     additionalBehaviors: {
+        //         "/ecs/*": {
+        //             origin: new cfo.LoadBalancerV2Origin(this.webAlbService.loadBalancer, {
+        //                 connectionAttempts: 3,
+        //                 connectionTimeout: cdk.Duration.seconds(10),
+        //                 readTimeout: cdk.Duration.seconds(45),
+        //                 keepaliveTimeout: cdk.Duration.seconds(45),
+        //                 protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
+        //                 httpPort: 80,
+        //             }),
+        //             allowedMethods: cf.AllowedMethods.ALLOW_ALL,
+        //             viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
+        //             cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+        //         }
+        //     },
+        //     defaultRootObject: "index.html",
+        //     priceClass: cf.PriceClass.PRICE_CLASS_200,
+        //     httpVersion: cf.HttpVersion.HTTP2_AND_3
+        // });
+        const cloudfront = new cf.CloudFrontWebDistribution(this, PARAMS.sw.id, {
+            originConfigs: [
+                {
+                    s3OriginSource: {
+                        originPath: "",
+                        s3BucketSource: bucket,
+                        originAccessIdentity: cfOriginAccessIdentity,
+                    },
+                    behaviors: [{
+                        isDefaultBehavior: true,
+                        viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
+                    }]
+                }, {
+                    customOriginSource: {
+                        domainName: this.webAlbService.loadBalancer.loadBalancerDnsName,
+                        originProtocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
+                        httpPort: 80,
+                    },
+                    behaviors: [{
+                        pathPattern: "/ecs*",
+                        allowedMethods: cf.CloudFrontAllowedMethods.ALL,
+                        viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL
+                    }]
+                }
+            ],
+            priceClass: cf.PriceClass.PRICE_CLASS_ALL,
+            httpVersion: cf.HttpVersion.HTTP2_AND_3
         });
     }
 }

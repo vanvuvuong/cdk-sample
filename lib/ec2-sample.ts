@@ -4,6 +4,8 @@ import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as aas from "aws-cdk-lib/aws-autoscaling";
+import * as cf from "aws-cdk-lib/aws-cloudfront";
+import * as cfo from "aws-cdk-lib/aws-cloudfront-origins";
 import * as lbv2 from "aws-cdk-lib/aws-elasticloadbalancingv2";
 export class Ec2Sample extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -83,7 +85,7 @@ export class Ec2Sample extends cdk.Stack {
             vpc,
             loadBalancerName: PARAMS.alb.name,
             securityGroup: albSecurityGroup,
-            internetFacing: false,
+            internetFacing: true,
             idleTimeout: cdk.Duration.seconds(180),
             vpcSubnets: vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.webSubnetName })
         });
@@ -108,8 +110,10 @@ export class Ec2Sample extends cdk.Stack {
         const userData = ec2.UserData.forLinux();
         userData.addCommands(
             "sudo amazon-linux-extras install nginx1 -y",
+            "sudo amazon-linux-extras enable php8.0",
             "sudo systemctl enable nginx",
             "sudo systemctl start nginx",
+            "sudo systemctl start php-fpm"
         );
         const ami = new ec2.AmazonLinuxImage({
             generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
@@ -142,7 +146,7 @@ export class Ec2Sample extends cdk.Stack {
                 interval: cdk.Duration.seconds(15),
                 protocol: lbv2.Protocol.HTTP,
                 healthyHttpCodes: "200"
-            }
+            },
         });
         // Adding lister's target groups
         listener80.addTargetGroups('addTargetGroups', {
@@ -172,5 +176,24 @@ export class Ec2Sample extends cdk.Stack {
             securityGroups: [rdsSecurityGroup]
         });
         /* end */
+
+        const lbOrigin = new cfo.LoadBalancerV2Origin(webALB, {
+            connectionAttempts: 3,
+            connectionTimeout: cdk.Duration.seconds(10),
+            readTimeout: cdk.Duration.seconds(45),
+            keepaliveTimeout: cdk.Duration.seconds(45),
+            protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
+            httpPort: 80,
+        });
+
+        const cfDistribution = new cf.Distribution(this, PARAMS.cf.id, {
+            defaultBehavior: {
+                origin: lbOrigin,
+                allowedMethods: cf.AllowedMethods.ALLOW_ALL,
+                cachePolicy: cf.CachePolicy.CACHING_DISABLED,
+            },
+            priceClass: cf.PriceClass.PRICE_CLASS_200,
+            httpVersion: cf.HttpVersion.HTTP2_AND_3
+        });
     }
 }
