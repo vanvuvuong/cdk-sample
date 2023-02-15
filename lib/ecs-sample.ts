@@ -121,15 +121,5 @@ export class HelloEcs extends cdk.Stack {
             protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
             httpPort: 80,
         });
-
-        // const cfDistribution = new cf.Distribution(this, PARAMS.cf.id, {
-        //     defaultBehavior: {
-        //         origin: lbOrigin,
-        //         allowedMethods: cf.AllowedMethods.ALLOW_ALL,
-        //         cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-        //     },
-        //     priceClass: cf.PriceClass.PRICE_CLASS_200,
-        //     httpVersion: cf.HttpVersion.HTTP2_AND_3
-        // });
     }
 }

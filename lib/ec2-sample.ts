@@ -1,6 +1,8 @@
 import { PARAMS } from "./params";
 import { Construct } from "constructs";
 import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as aas from "aws-cdk-lib/aws-autoscaling";
@@ -12,8 +14,7 @@ export class Ec2Sample extends cdk.Stack {
         super(scope, id, props);
 
         /*
-        Create VPC
-            start
+        Create VPC - start
         */
         // Create new VPC with 2 subnets
         const vpc = new ec2.Vpc(this, PARAMS.vpc.id, {
@@ -43,12 +44,10 @@ export class Ec2Sample extends cdk.Stack {
             service: ec2.GatewayVpcEndpointAwsService.S3,
             subnets: [vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.webSubnetName })]
         });
-
         /* end */
 
         /*
-        Create Security Groups
-            start
+        Create Security Groups - start
         */
         // Security Group for ALB
         const albSecurityGroup = new ec2.SecurityGroup(this, PARAMS.alb.sgId, {
@@ -74,12 +73,10 @@ export class Ec2Sample extends cdk.Stack {
             description: "SG for RDS"
         });
         rdsSecurityGroup.addIngressRule(instanceSecurityGroup, ec2.Port.tcp(3306));
-
         /* end */
 
         /*
-        Create Load Balancer
-            start
+        Create Load Balancer - start
         */
         const webALB = new lbv2.ApplicationLoadBalancer(this, PARAMS.alb.id, {
             vpc,
@@ -104,8 +101,7 @@ export class Ec2Sample extends cdk.Stack {
         /* end */
 
         /*
-        Create Auto Scaling Groups
-            start
+        Create Auto Scaling Groups - start
         */
         const userData = ec2.UserData.forLinux();
         userData.addCommands(
@@ -117,7 +113,7 @@ export class Ec2Sample extends cdk.Stack {
         );
         const ami = new ec2.AmazonLinuxImage({
             generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
-            cpuType: ec2.AmazonLinuxCpuType.X86_64,
+            cpuType: ec2.AmazonLinuxCpuType.ARM_64,
         });
         const template = new ec2.LaunchTemplate(this, PARAMS.asg.ltId, {
             userData,
@@ -125,7 +121,7 @@ export class Ec2Sample extends cdk.Stack {
             keyName: PARAMS.ec2KeyName,
             launchTemplateName: PARAMS.asg.ltName,
             securityGroup: instanceSecurityGroup,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.SMALL),
         });
         const autoscaling = new aas.AutoScalingGroup(this, PARAMS.asg.id, {
             vpc,
@@ -155,8 +151,7 @@ export class Ec2Sample extends cdk.Stack {
         /* end */
 
         /*
-        Create RDS
-            start
+        Create RDS - start
         */
         const cluster = new rds.DatabaseInstance(this, PARAMS.rds.id, {
             vpc,
@@ -164,14 +159,14 @@ export class Ec2Sample extends cdk.Stack {
             allocatedStorage: 60,
             publiclyAccessible: false,
             networkType: rds.NetworkType.IPV4,
-            availabilityZone: PARAMS.vpc.az[0],
+            multiAz: true,
             credentials: rds.Credentials.fromGeneratedSecret('admin'), // create secret key in AWS Secret Manager
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
             vpcSubnets: {
                 subnetGroupName: PARAMS.vpc.rdsSubnetName
             },
             engine: rds.DatabaseInstanceEngine.mysql({
-                version: rds.MysqlEngineVersion.VER_5_7
+                version: rds.MysqlEngineVersion.VER_8_0_28
             }),
             securityGroups: [rdsSecurityGroup]
         });
@@ -186,13 +181,53 @@ export class Ec2Sample extends cdk.Stack {
             httpPort: 80,
         });
 
-        const cfDistribution = new cf.Distribution(this, PARAMS.cf.id, {
-            defaultBehavior: {
-                origin: lbOrigin,
-                allowedMethods: cf.AllowedMethods.ALLOW_ALL,
-                cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-            },
-            priceClass: cf.PriceClass.PRICE_CLASS_200,
+        const cfOriginAccessIdentity = new cf.OriginAccessIdentity(this, 'OAI', {
+            comment: "only from cloudfront to s3 - static with ecs",
+        });
+
+        const bucket = new s3.Bucket(this, PARAMS.cf.bucketId, {
+            publicReadAccess: false,
+            bucketName: PARAMS.cf.bucketName,
+            websiteIndexDocument: 'index.html',
+            websiteErrorDocument: '404.html',
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
+            accessControl: s3.BucketAccessControl.PRIVATE,
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+            objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED
+        });
+        bucket.grantRead(cfOriginAccessIdentity);
+
+        const sampleHtmlFile = new s3deploy.BucketDeployment(this, PARAMS.cf.fileId, {
+            destinationBucket: bucket,
+            sources: [s3deploy.Source.asset('./public')],
+        });
+
+        const cloudfront = new cf.CloudFrontWebDistribution(this, PARAMS.sw.id, {
+            originConfigs: [
+                {
+                    s3OriginSource: {
+                        originPath: "",
+                        s3BucketSource: bucket,
+                        originAccessIdentity: cfOriginAccessIdentity,
+                    },
+                    behaviors: [{
+                        isDefaultBehavior: true,
+                        viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
+                    }]
+                }, {
+                    customOriginSource: {
+                        domainName: webALB.loadBalancerDnsName,
+                        originProtocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
+                        httpPort: 80,
+                    },
+                    behaviors: [{
+                        pathPattern: "/ec2*",
+                        allowedMethods: cf.CloudFrontAllowedMethods.ALL,
+                        viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL
+                    }]
+                }
+            ],
+            priceClass: cf.PriceClass.PRICE_CLASS_ALL,
             httpVersion: cf.HttpVersion.HTTP2_AND_3
         });
     }
