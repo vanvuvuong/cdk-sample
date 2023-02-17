@@ -1,16 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
-import { StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { BaseApplication } from './application-base';
 
-export class BackEnd extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: StackProps) {
+export class BackEnd extends BaseApplication {
+    constructor(scope: Construct, id: string, props?: cdk.StackProps) {
         super(scope, id, props);
-
-        // Prepare IAM, cloudtrail, cloudwatch
-
-        // Create vpc net & subnet
-
-        // Create cognito
 
         // Create appsync
 
