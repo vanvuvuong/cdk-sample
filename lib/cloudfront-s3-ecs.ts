@@ -30,35 +30,6 @@ export class Cloudfront extends HelloEcs {
             destinationBucket: bucket,
             sources: [s3deploy.Source.asset('./public')],
         });
-
-        // const cfDistribution = new cf.Distribution(this, `${PARAMS.cf.id}-2`, {
-        //     defaultBehavior: {
-        //         origin: new cfo.S3Origin(bucket, {
-        //             originPath: "",
-        //             originAccessIdentity: cfOriginAccessIdentity,
-        //         }),
-        //         allowedMethods: cf.AllowedMethods.ALLOW_ALL,
-        //         cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-        //     },
-        //     additionalBehaviors: {
-        //         "/ecs/*": {
-        //             origin: new cfo.LoadBalancerV2Origin(this.webAlbService.loadBalancer, {
-        //                 connectionAttempts: 3,
-        //                 connectionTimeout: cdk.Duration.seconds(10),
-        //                 readTimeout: cdk.Duration.seconds(45),
-        //                 keepaliveTimeout: cdk.Duration.seconds(45),
-        //                 protocolPolicy: cf.OriginProtocolPolicy.HTTP_ONLY,
-        //                 httpPort: 80,
-        //             }),
-        //             allowedMethods: cf.AllowedMethods.ALLOW_ALL,
-        //             viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
-        //             cachePolicy: cf.CachePolicy.CACHING_DISABLED,
-        //         }
-        //     },
-        //     defaultRootObject: "index.html",
-        //     priceClass: cf.PriceClass.PRICE_CLASS_200,
-        //     httpVersion: cf.HttpVersion.HTTP2_AND_3
-        // });
         const cloudfront = new cf.CloudFrontWebDistribution(this, PARAMS.sw.id, {
             originConfigs: [
                 {
@@ -84,6 +55,10 @@ export class Cloudfront extends HelloEcs {
                     }]
                 }
             ],
+            errorConfigurations: [{
+                errorCode: 404,
+                responsePagePath: "404.html"
+            }],
             priceClass: cf.PriceClass.PRICE_CLASS_ALL,
             httpVersion: cf.HttpVersion.HTTP2_AND_3
         });

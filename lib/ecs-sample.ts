@@ -58,10 +58,19 @@ export class HelloEcs extends cdk.Stack {
             desiredCapacity: 2,
             keyName: PARAMS.ec2KeyName,
             allowAllOutbound: true,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.SMALL),
             vpcSubnets: vpc.selectSubnets({ subnetGroupName: PARAMS.vpc.pubTestNetName }),
+            machineImage: new ec2.AmazonLinuxImage({
+                generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
+                cpuType: ec2.AmazonLinuxCpuType.ARM_64,
+            }),
         });
         autoScalingGroup.addSecurityGroup(asgSecurityGroup);
+        autoScalingGroup.addUserData(
+            "sudo amazon-linux-extras install ecs -y",
+            "sudo systemctl start ecs",
+            "sudo systemctl enable ecs",
+        );
 
         let taskDefinition = new ecs.Ec2TaskDefinition(this, PARAMS.ecs.tdId, {
             family: "WebService",
@@ -102,12 +111,12 @@ export class HelloEcs extends cdk.Stack {
             networkType: rds.NetworkType.IPV4,
             availabilityZone: PARAMS.vpc.az[0],
             credentials: rds.Credentials.fromGeneratedSecret('admin'), // create secret key in AWS Secret Manager
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
             vpcSubnets: {
                 subnetGroupName: PARAMS.vpc.rdsSubnetName
             },
             engine: rds.DatabaseInstanceEngine.mysql({
-                version: rds.MysqlEngineVersion.VER_5_7
+                version: rds.MysqlEngineVersion.VER_8_0_28
             }),
             securityGroups: [rdsSecurityGroup],
             backupRetention: cdk.Duration.days(0),

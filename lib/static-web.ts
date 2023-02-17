@@ -40,6 +40,10 @@ export class StaticWeb extends cdk.Stack {
                     viewerProtocolPolicy: cf.ViewerProtocolPolicy.ALLOW_ALL,
                 }],
             }],
+            errorConfigurations: [{
+                errorCode: 404,
+                responsePagePath: "404.html"
+            }],
             priceClass: cf.PriceClass.PRICE_CLASS_ALL,
             httpVersion: cf.HttpVersion.HTTP2_AND_3
         });

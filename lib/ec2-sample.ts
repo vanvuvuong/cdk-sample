@@ -227,6 +227,10 @@ export class Ec2Sample extends cdk.Stack {
                     }]
                 }
             ],
+            errorConfigurations: [{
+                errorCode: 404,
+                responsePagePath: "404.html"
+            }],
             priceClass: cf.PriceClass.PRICE_CLASS_ALL,
             httpVersion: cf.HttpVersion.HTTP2_AND_3
         });
