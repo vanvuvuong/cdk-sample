@@ -12,7 +12,7 @@ export class FrontEnd extends BaseApplication {
 
         // Create the ACM certificate
 
-        // Create route53 hosted zone
+        // Create route53 hosted zones
 
         // Create s3 frontend bucket
         const cfOriginAccessIdentity = new cf.OriginAccessIdentity(this, 'OAI', {

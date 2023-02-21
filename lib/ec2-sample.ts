@@ -159,6 +159,7 @@ export class Ec2Sample extends cdk.Stack {
             allocatedStorage: 60,
             publiclyAccessible: false,
             networkType: rds.NetworkType.IPV4,
+            deleteAutomatedBackups: true,
             multiAz: true,
             credentials: rds.Credentials.fromGeneratedSecret('admin'), // create secret key in AWS Secret Manager
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.MICRO),
@@ -168,7 +169,8 @@ export class Ec2Sample extends cdk.Stack {
             engine: rds.DatabaseInstanceEngine.mysql({
                 version: rds.MysqlEngineVersion.VER_8_0_28
             }),
-            securityGroups: [rdsSecurityGroup]
+            securityGroups: [rdsSecurityGroup],
+            backupRetention: cdk.Duration.days(0),
         });
         /* end */
 

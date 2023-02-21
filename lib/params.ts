@@ -2,6 +2,7 @@ export const PARAMS = {
     vpc: {
         id: "VPC", name: "Kasumi-Sample", az: ["ap-northeast-1a", "ap-northeast-1c"],
         natGateways: 0, webSubnetName: "web-private-net", rdsSubnetName: "rds-private-net",
+        serverlessSubnet1a: "1a-serverless-subnet", serverlessSubnet1c: "1c-serverless-subnet",
         pubTestNetName: "publicTestNet", privateNetRTId: "PrivateRT",
         endpointId: "VPC-Endpoint"
     },
@@ -17,5 +18,7 @@ export const PARAMS = {
     },
     sw: { bucketId: "Bucket", bucketName: "static-sampled-s", fileId: "SampleHtmlDeploy", id: "StaticCFO" },
     cf: { bucketId: "Bucket", bucketName: "static-sampled-ss", fileId: "SampleHtmlDeploy", id: "StaticCF" },
+    lambda: { id: "Lambda" },
+    appSync: { id: "AppSync", name: "LambdaAPI" },
     ec2KeyName: "sample"
 }
